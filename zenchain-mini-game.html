@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZenChain Mini Game</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+<style>
+body {margin:0; font-family:'Orbitron',sans-serif; background:radial-gradient(circle at center,#0d0d0d,#1a1a1a); color:white; display:flex; flex-direction:column; align-items:center; min-height:100vh; justify-content:center; overflow-x:hidden; will-change: transform;}
+.nav-bar {display: flex; justify-content: center; align-items: center; width: 100%; max-width: 500px; padding: 10px 20px; background: rgba(0,0,0,0.4); border-radius: 15px; margin-bottom: 10px; backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 20px rgba(0,0,0,0.3); position: relative;}
+.logo {width: 80px; height: 80px; border-radius: 50%; opacity: 0.95; box-shadow: 0 0 25px rgba(255,255,255,0.4); transition: transform 0.3s ease, box-shadow 0.3s ease;}
+.logo:hover {transform: scale(1.1); box-shadow: 0 0 30px rgba(255,255,255,0.6);}
+.menu-button {position: absolute; top: 50%; right: 20px; transform: translateY(-50%); font-size: 30px; cursor: pointer; background: rgba(0,0,0,0.6); border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: background 0.3s ease, transform 0.3s ease; color: white; border:1px solid rgba(255,255,255,0.2); z-index: 10;}
+.menu-button:hover {background: rgba(255,255,255,0.25); transform: translateY(-50%) scale(1.1) rotate(90deg);}
+.header {font-size: 1.8rem; font-weight: 700; margin: 10px 0; text-align: center; text-shadow: 0 0 20px rgba(255,255,255,0.5); letter-spacing: 1px; line-height: 1.2; transition: transform 0.3s ease;}
+.header:hover {transform: scale(1.02);}
+.score, .timer {margin: 10px 0; font-size: 1.4rem; font-weight: 400; opacity: 0.8; transition: opacity 0.3s ease;}
+.game-container {position: relative; width: 400px; height: 400px; background: rgba(255,255,255,0.02); border-radius: 25px; overflow: hidden; box-shadow: 0 0 50px rgba(124,77,255,0.2), inset 0 0 50px rgba(255,255,255,0.05); margin: 20px auto; backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); transition: box-shadow 0.3s ease; max-width:90vw; max-height:90vw; aspect-ratio:1; will-change: contents;}
+.game-container:hover {box-shadow: 0 0 60px rgba(124,77,255,0.3), inset 0 0 50px rgba(255,255,255,0.05);}
+.menu-content {display: none; position: absolute; top: 70px; right: 20px; background: rgba(0,0,0,0.95); padding: 15px; border-radius: 15px; flex-direction: column; gap: 10px; backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.1); z-index: 1001; box-shadow: 0 8px 32px rgba(0,0,0,0.4);}
+.menu-content button {background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.2)); color: white; border: none; padding: 10px 15px; border-radius: 10px; cursor: pointer; transition: 0.3s ease; font-family: inherit; font-size: 14px; border:1px solid rgba(255,255,255,0.1);}
+.menu-content button:hover {background: linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.3)); transform: translateX(5px); box-shadow: 0 4px 15px rgba(255,255,255,0.1);}
+button.game-btn {margin: 15px 0; padding: 15px 30px; border: none; border-radius: 20px; font-size: 18px; font-family: inherit; cursor: pointer; background: linear-gradient(135deg, #ff4081, #7c4dff); color: white; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(124,77,255,0.4); letter-spacing: 1px; border:1px solid rgba(255,255,255,0.1); width:100%; max-width:300px;}
+button.game-btn:hover {transform: translateY(-5px) scale(1.05); box-shadow: 0 8px 25px rgba(124,77,255,0.6);}
+button.game-btn:active {transform: translateY(-2px);}
+.bubble {position: absolute; width: 55px; height: 55px; border-radius: 50%; cursor: pointer; opacity: 0; transform: scale(0.5) rotate(0deg); background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95), rgba(255,255,255,0.6) 50%, rgba(255,255,255,0.3) 70%, transparent 80%); transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94); border: 2px solid rgba(255,255,255,0.5); box-shadow: inset 0 0 20px rgba(255,255,255,0.4), 0 0 25px rgba(255,255,255,0.3), 0 4px 15px rgba(0,0,0,0.1); will-change: transform, opacity;}
+.bubble.active {opacity: 1; transform: scale(1) rotate(180deg); animation: floatBubble 3s ease-in-out infinite;}
+@keyframes floatBubble {0%, 100% {transform: translateY(0) scale(1) rotate(180deg);} 50% {transform: translateY(-20px) scale(1.1) rotate(180deg);}}
+.burst {position: absolute; width: 55px; height: 55px; border-radius: 50%; pointer-events: none; box-shadow: 0 0 30px 10px currentColor; animation: burst-pop 0.3s forwards; opacity: 0; will-change: transform;}
+@keyframes burst-pop {0% {transform: scale(0.8); opacity: 1;} 50% {transform: scale(2.5); opacity: 0.8;} 100% {transform: scale(3.5); opacity: 0;}}
+.particle {pointer-events: none; will-change: transform, opacity;}
+.game-over-overlay {position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; background: rgba(0,0,0,0.95); color: white; font-size: 22px; z-index: 1000; backdrop-filter: blur(10px); animation: fadeIn 0.3s ease;}
+@keyframes fadeIn {from {opacity:0;} to {opacity:1;}}
+.game-over-overlay .score {font-size: 2rem; font-weight: 700; text-shadow: 0 0 20px rgba(255,255,255,0.5); margin-bottom: 10px;}
+.claim-overlay {position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; background: rgba(0,0,0,0.95); color: white; font-size: 22px; z-index: 1000; backdrop-filter: blur(10px); animation: fadeIn 0.3s ease;}
+.claim-overlay input {padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: white; font-size: 16px; width: 300px; max-width: 90vw;}
+.claim-overlay #txResult {font-size: 16px; text-align: center; margin: 10px 0; word-break: break-all;}
+.claim-overlay a {color: #7c4dff; text-decoration: none;}
+.claim-overlay .warning {background: rgba(255, 0, 0, 0.2); padding: 10px; border-radius: 10px; margin: 10px 0; font-size: 14px; text-align: center;}
+.settings, .history {position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 15px; background: rgba(0,0,0,0.95); color: white; font-size: 22px; z-index: 1000; backdrop-filter: blur(10px); animation: fadeIn 0.3s ease;}
+.settings h3 {font-size: 28px; margin-bottom: 20px; text-shadow: 0 0 10px rgba(255,255,255,0.5);}
+.settings button, .history button, #closeOverlay, #claimButton, #closeClaim {background: linear-gradient(135deg, #ff4081, #7c4dff); border: none; padding: 12px 20px; border-radius: 15px; cursor: pointer; font-size: 16px; color: white; margin: 5px; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(124,77,255,0.3);}
+.settings button:hover, .history button:hover, #closeOverlay:hover, #claimButton:hover, #closeClaim:hover {transform: translateY(-3px); box-shadow: 0 6px 20px rgba(124,77,255,0.5);}
+.history ul {list-style: none; padding: 0; text-align: center; font-size: 18px;}
+.history li {margin: 5px 0; opacity: 0.8; transition: opacity 0.3s ease;}
+.history .high-score-history {font-size: 20px; font-weight: bold; margin-bottom: 10px; text-shadow: 0 0 10px rgba(255,255,255,0.5);}
+@media (max-width: 480px) {
+  .nav-bar {padding: 8px 15px; max-width:95vw;}
+  .logo {width:70px; height:70px;}
+  .menu-button {width:40px; height:40px; font-size:26px; right:15px;}
+  .header {font-size:1.5rem; letter-spacing:0.5px;}
+  .score, .timer {font-size:1.2rem;}
+  .game-container {width:90vw; height:90vw;}
+  button.game-btn {padding:12px 20px; font-size:16px; max-width:250px;}
+  .settings h3, .game-over-overlay h1 {font-size:24px;}
+  .settings button, .history button, #closeOverlay {padding:10px 15px; font-size:14px;}
+  .claim-overlay input {width: 250px;}
+}
+</style>
+</head>
+<body>
+
+<div class="nav-bar">
+  <img src="https://pbs.twimg.com/profile_images/1828045721926295552/kto72DAJ.png" class="logo" alt="Logo">
+  <div class="menu-button" id="menuButton">⋮</div>
+</div>
+<div class="menu-content" id="menuContent">
+  <button id="showHistory">📜 History</button>
+  <button id="showSettings">⚙️ Settings</button>
+  <button id="closeMenu">❌ Close Menu</button>
+</div>
+
+<div class="header">ZenChain Mini Game</div>
+<div class="score" id="score">ZenCoin: 0</div>
+<div class="timer" id="timer">Total Time: 30s</div>
+
+<div class="game-container" id="gameContainer">
+  <div class="game-over-overlay" id="gameOverOverlay">
+    <div class="score" id="currentScore">ZenCoin Earned: 0</div>
+    <button id="claimRewards" class="game-btn">💰 Claim ZenCoin</button>
+    <button id="closeOverlay" class="game-btn">❌ Close</button>
+  </div>
+</div>
+
+<div class="claim-overlay" id="claimOverlay">
+  <div class="warning">⚠️ Warning: Treasury wallet private key is placed in JS code (insecure for production! Better to use backend).</div>
+  <h3>Claim Your ZenCoin</h3>
+  <p>Enter your ZenChain wallet address:</p>
+  <input type="text" id="walletAddress" placeholder="0x..." />
+  <button id="claimButton">Send ZTC</button>
+  <div id="txResult"></div>
+  <button id="closeClaim">❌ Close</button>
+</div>
+
+<div class="settings" id="settings">
+  <h3>Select Difficulty</h3>
+  <button data-difficulty="easy">🐢 Easy (35s)</button>
+  <button data-difficulty="normal">⚡ Normal (30s)</button>
+  <button data-difficulty="hard">🔥 Hard (25s)</button>
+  <button id="closeSettings">❌ Close</button>
+</div>
+
+<div class="history" id="history">
+  <h3>Last 10 Rounds</h3>
+  <div class="high-score-history" id="highScoreHistory">High Score: 0 ZenCoin</div>
+  <ul id="historyList"></ul>
+  <button id="closeHistory">❌ Close</button>
+</div>
+
+<button class="game-btn" id="playButton">▶️ Play</button>
+<button class="game-btn" id="pauseButton" style="display:none;">⏸️ Pause</button>
+<button class="game-btn" id="resumeButton" style="display:none;">▶️ Resume</button>
+
+<audio id="hitSound" src="https://assets.mixkit.co/active_storage/sfx/2574/2574-preview.mp3"></audio>
+
+<script>
+// Wait for DOM and ethers to load
+document.addEventListener('DOMContentLoaded', function() {
+  // Check if ethers is loaded after a short delay
+  setTimeout(function() {
+    if (typeof ethers === 'undefined') {
+      console.error('Ethers.js failed to load');
+      // Optionally show an error message
+    } else {
+      console.log('Ethers loaded successfully:', ethers.version);
+    }
+  }, 1000);
+});
+
+// --- Treasury Wallet Config ---
+// ⚠️ For security, place private key in backend (Node.js server) and use API.
+// Here for demo, directly in JS (use only for local testing!).
+const TREASURY_PRIVATE_KEY = '0xdd9b8ef6eac5e225e3eb23f5a632fe85587ae6c431e471ac4db3d5f51a015af3'; // Replace with real treasury wallet private key
+const ZENCHAIN_RPC = 'https://zenchain-testnet.api.onfinality.io/public'; // Testnet RPC
+const CHAIN_ID = 8408; // Testnet
+const EXPLORER_URL = 'https://zentrace.io/tx/'; // Testnet Explorer
+
+// --- Variables ---
+const gameContainer = document.getElementById('gameContainer');
+const playButton = document.getElementById('playButton');
+const pauseButton = document.getElementById('pauseButton');
+const resumeButton = document.getElementById('resumeButton');
+const scoreElem = document.getElementById('score');
+const timerElem = document.getElementById('timer');
+const gameOverOverlay = document.getElementById('gameOverOverlay');
+const currentScoreElem = document.getElementById('currentScore');
+const highScoreHistory = document.getElementById('highScoreHistory');
+const closeOverlay = document.getElementById('closeOverlay');
+const claimRewards = document.getElementById('claimRewards');
+const claimOverlay = document.getElementById('claimOverlay');
+const walletAddressInput = document.getElementById('walletAddress');
+const claimButton = document.getElementById('claimButton');
+const txResult = document.getElementById('txResult');
+const closeClaim = document.getElementById('closeClaim');
+const hitSound = document.getElementById('hitSound');
+
+const menuButton = document.getElementById('menuButton');
+const menuContent = document.getElementById('menuContent');
+const historySection = document.getElementById('history');
+const settingsSection = document.getElementById('settings');
+const historyList = document.getElementById('historyList');
+
+let score = 0, timeLeft = 30, highScore = 0, gameInterval, activeShapeTimeout, paused = false, difficulty = 'normal', gameStarted = false;
+let historyScores = [];
+
+// --- Initial Setup ---
+settingsSection.style.display = 'flex';
+playButton.style.display = 'none';
+pauseButton.style.display = 'none';
+resumeButton.style.display = 'none';
+gameOverOverlay.style.display = 'none';
+historySection.style.display = 'none';
+menuContent.style.display = 'none';
+claimOverlay.style.display = 'none';
+
+// --- Menu ---
+menuButton.addEventListener('click', () => { 
+  menuContent.style.display = menuContent.style.display === 'flex' ? 'none' : 'flex'; 
+});
+document.getElementById('closeMenu').addEventListener('click', () => { menuContent.style.display = 'none'; });
+document.getElementById('showHistory').addEventListener('click', () => { 
+  historySection.style.display = 'flex'; 
+  settingsSection.style.display = 'none'; 
+  menuContent.style.display = 'none'; 
+  renderHistory(); 
+});
+document.getElementById('showSettings').addEventListener('click', () => { 
+  settingsSection.style.display = 'flex'; 
+  historySection.style.display = 'none'; 
+  menuContent.style.display = 'none'; 
+});
+document.getElementById('closeHistory').addEventListener('click', () => { 
+  historySection.style.display = 'none'; 
+  if (!gameStarted) settingsSection.style.display = 'flex';
+});
+document.getElementById('closeSettings').addEventListener('click', () => { 
+  settingsSection.style.display = 'none'; 
+  if (!gameStarted) {
+    playButton.style.display = 'inline-block';
+    timeLeft = difficulty === 'easy' ? 35 : difficulty === 'hard' ? 25 : 30;
+    timerElem.textContent = `Total Time: ${timeLeft}s`;
+  }
+});
+closeOverlay.addEventListener('click', () => { gameOverOverlay.style.display = 'none'; });
+closeClaim.addEventListener('click', () => { 
+  claimOverlay.style.display = 'none'; 
+  gameOverOverlay.style.display = 'flex'; 
+  walletAddressInput.value = '';
+  txResult.innerHTML = '';
+});
+
+// --- Claim Rewards with Real Transaction ---
+claimRewards.addEventListener('click', () => {
+  gameOverOverlay.style.display = 'none';
+  claimOverlay.style.display = 'flex';
+});
+
+claimButton.addEventListener('click', async () => {
+  if (typeof ethers === 'undefined') {
+    alert('Ethers.js is not loaded. Please refresh the page and check your internet connection.');
+    return;
+  }
+  const addr = walletAddressInput.value.trim();
+  if (!addr || !addr.startsWith('0x')) {
+    alert('Please enter a valid ZenChain wallet address.');
+    return;
+  }
+  if (score === 0) {
+    alert('No ZenCoin earned to claim.');
+    return;
+  }
+
+  claimButton.disabled = true;
+  claimButton.textContent = 'Sending...';
+  txResult.innerHTML = '<p>Sending transaction...</p>';
+
+  try {
+    const provider = new ethers.providers.JsonRpcProvider(ZENCHAIN_RPC);
+    const wallet = new ethers.Wallet(TREASURY_PRIVATE_KEY, provider);
+
+    // Check treasury balance
+    const balance = await provider.getBalance(wallet.address);
+    const requiredAmount = ethers.utils.parseEther(score.toString()); // Assume: score = ZTC (18 decimals)
+    if (balance.lt(requiredAmount)) {
+      throw new Error('Insufficient balance in treasury wallet.');
+    }
+
+    // Send transaction
+    const tx = await wallet.sendTransaction({
+      to: addr,
+      value: requiredAmount,
+      gasLimit: 21000, // For native transfer
+      chainId: CHAIN_ID
+    });
+
+    // Wait for confirm
+    const receipt = await tx.wait();
+    const hash = receipt.transactionHash;
+
+    txResult.innerHTML = `
+      <p>Transaction sent successfully! Amount: ${score} ZTC to address ${addr.substring(0, 10)}...${addr.substring(addr.length - 6)}</p>
+      <p>Transaction Hash: <a href="${EXPLORER_URL}${hash}" target="_blank">${hash}</a></p>
+      <p>Block: <a href="${EXPLORER_URL}${receipt.blockNumber}" target="_blank">${receipt.blockNumber}</a></p>
+    `;
+
+    // Reset score after successful claim
+    score = 0;
+    currentScoreElem.textContent = `ZenCoin Earned: ${score}`;
+  } catch (error) {
+    console.error(error);
+    txResult.innerHTML = `<p>Transaction failed: ${error.message}</p>`;
+  } finally {
+    claimButton.disabled = false;
+    claimButton.textContent = 'Send ZTC';
+  }
+});
+
+// --- Difficulty ---
+settingsSection.querySelectorAll('button[data-difficulty]').forEach(btn => { 
+  btn.addEventListener('click', () => { 
+    difficulty = btn.dataset.difficulty; 
+    timeLeft = difficulty === 'easy' ? 35 : difficulty === 'hard' ? 25 : 30;
+    settingsSection.style.display = 'none'; 
+    playButton.style.display = 'inline-block';
+    timerElem.textContent = `Total Time: ${timeLeft}s`;
+    scoreElem.textContent = 'ZenCoin: 0';
+  }); 
+});
+
+// --- History ---
+function renderHistory() { 
+  historyList.innerHTML = ''; 
+  highScoreHistory.textContent = `High Score: ${highScore} ZenCoin`;
+  if (historyScores.length === 0) {
+    const li = document.createElement('li');
+    li.textContent = 'No games played yet.';
+    historyList.appendChild(li);
+  } else {
+    historyScores.slice(-10).reverse().forEach((s, i) => { 
+      const li = document.createElement('li'); 
+      li.textContent = `#${i + 1}: ${s} ZenCoin`; 
+      historyList.appendChild(li); 
+    }); 
+  }
+}
+
+// --- Bubble ---
+function randomColor() { return `hsl(${Math.random() * 360}, 70%, 60%)`; }
+function createBubble() {
+  const bubble = document.createElement('div'); 
+  bubble.className = 'bubble';
+  let containerSize = gameContainer.offsetWidth - 55;
+  let x = Math.random() * containerSize, y = Math.random() * containerSize; 
+  bubble.style.left = x + 'px'; 
+  bubble.style.top = y + 'px';
+  const color = randomColor(); 
+  bubble.style.background = `radial-gradient(circle at 30% 30%, ${color}95, ${color}60 50%, rgba(255,255,255,0.2) 70%, transparent 80%)`;
+  bubble.style.boxShadow = `inset 0 0 20px ${color}40, 0 0 25px ${color}50, 0 4px 15px rgba(0,0,0,0.1)`;
+  gameContainer.appendChild(bubble);
+  setTimeout(() => bubble.classList.add('active'), 50);
+  bubble.addEventListener('click', () => {
+    if (!bubble.classList.contains('active') || !gameStarted || paused) return;
+    score++; 
+    scoreElem.textContent = "ZenCoin: " + score;
+    hitSound.cloneNode().play();
+    createBurst(x, y, color);
+    removeBubble(bubble);
+  });
+  return bubble;
+}
+function createBurst(x, y, color) { 
+  const burst = document.createElement('div'); 
+  burst.className = 'burst'; 
+  burst.style.left = x + 'px'; 
+  burst.style.top = y + 'px'; 
+  burst.style.color = color; 
+  gameContainer.appendChild(burst); 
+  setTimeout(() => burst.remove(), 300);
+  // Additional particles for burst effect
+  for (let i = 0; i < 5; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    particle.style.position = 'absolute';
+    particle.style.width = '6px';
+    particle.style.height = '6px';
+    particle.style.background = color;
+    particle.style.left = (x + Math.random() * 30 - 15) + 'px';
+    particle.style.top = (y + Math.random() * 30 - 15) + 'px';
+    particle.style.borderRadius = '50%';
+    gameContainer.appendChild(particle);
+    setTimeout(() => {
+      particle.animate([
+        { transform: 'scale(1)', opacity: 1 },
+        { transform: 'scale(0) translate(var(--dx), var(--dy))', opacity: 0 }
+      ], { 
+        duration: 300, 
+        easing: 'ease-out',
+        variables: {
+          '--dx': (Math.random() - 0.5) * 100 + 'px',
+          '--dy': (Math.random() - 0.5) * 100 + 'px'
+        }
+      }).onfinish = () => particle.remove();
+    }, 0);
+  }
+}
+function removeBubble(bubble) { 
+  bubble.classList.remove('active'); 
+  setTimeout(() => bubble.remove(), 500);
+}
+function activateBubble() { 
+  if (paused || timeLeft <= 0 || !gameStarted) return; 
+  const bubble = createBubble(); 
+  let intervalTime = 1500; 
+  if (difficulty === 'easy') intervalTime = 1500; 
+  if (difficulty === 'normal') intervalTime = 1200;
+  if (difficulty === 'hard') intervalTime = 900; 
+  activeShapeTimeout = setTimeout(() => { 
+    removeBubble(bubble); 
+    if (timeLeft > 0 && !paused && gameStarted) activateBubble(); 
+  }, intervalTime);
+}
+
+// --- Timer ---
+function updateTimer() {
+  if (!paused && gameStarted) {
+    timeLeft -= 0.1;
+    timerElem.textContent = "Time: " + timeLeft.toFixed(1) + "s";
+    if (timeLeft <= 0) {
+      endGame();
+    }
+  }
+}
+
+// --- Game Controls ---
+function startGame() {
+  gameStarted = true;
+  score = 0;
+  paused = false;
+  timeLeft = difficulty === 'easy' ? 35 : difficulty === 'hard' ? 25 : 30;
+  scoreElem.textContent = "ZenCoin: 0";
+  timerElem.textContent = `Time: ${timeLeft.toFixed(1)}s`;
+  gameOverOverlay.style.display = 'none';
+  playButton.style.display = 'none';
+  pauseButton.style.display = 'inline-block';
+  resumeButton.style.display = 'none';
+  clearInterval(gameInterval);
+  gameInterval = setInterval(updateTimer, 100);
+  activateBubble();
+}
+
+function endGame() {
+  gameStarted = false;
+  clearInterval(gameInterval);
+  if (activeShapeTimeout) clearTimeout(activeShapeTimeout);
+  document.querySelectorAll('.bubble, .burst, .particle').forEach(el => el.remove());
+  currentScoreElem.textContent = `ZenCoin Earned: ${score}`;
+  if (score > highScore) {
+    highScore = score;
+  }
+  historyScores.push(score);
+  renderHistory();
+  gameOverOverlay.style.display = 'flex';
+  playButton.style.display = 'inline-block';
+  pauseButton.style.display = 'none';
+  resumeButton.style.display = 'none';
+  timerElem.textContent = `Total Time: ${difficulty === 'easy' ? 35 : difficulty === 'hard' ? 25 : 30}s`;
+}
+
+playButton.addEventListener('click', startGame);
+pauseButton.addEventListener('click', () => {
+  paused = true;
+  pauseButton.style.display = 'none';
+  resumeButton.style.display = 'inline-block';
+});
+resumeButton.addEventListener('click', () => {
+  paused = false;
+  pauseButton.style.display = 'inline-block';
+  resumeButton.style.display = 'none';
+  if (timeLeft > 0 && gameStarted) {
+    activateBubble();
+  }
+});
+</script>
+</body>
+</html>
